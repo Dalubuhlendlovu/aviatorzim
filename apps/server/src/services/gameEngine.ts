@@ -1,0 +1,104 @@
+import { EventEmitter } from "node:events";
+import {
+  GAME_RULES,
+  getLiveMultiplier,
+  type CrashRound,
+  type PublicRoundState
+} from "@aviator-zim/shared";
+import { generateCrash } from "@aviator-zim/shared/provably-fair";
+
+interface RoundEvents {
+  round: (state: PublicRoundState) => void;
+  crash: (round: CrashRound) => void;
+}
+
+export class GameEngine extends EventEmitter {
+  private serverSeed = crypto.randomUUID();
+  private nonce = 0;
+  private currentRound: CrashRound;
+  private history: number[] = [1.14, 2.48, 1.01, 3.62, 1.87, 6.2];
+  private interval?: NodeJS.Timeout;
+
+  constructor() {
+    super();
+    this.currentRound = this.createRound();
+  }
+
+  public start() {
+    this.scheduleNextRound(1_500);
+  }
+
+  public getPublicState(): PublicRoundState {
+    return {
+      roundId: this.currentRound.roundId,
+      hash: this.currentRound.hash,
+      status: this.currentRound.status,
+      elapsedMs: this.currentRound.elapsedMs,
+      currentMultiplier: this.currentRound.currentMultiplier,
+      startedAt: this.currentRound.startedAt,
+      lastCrashPoint: this.history[0],
+      history: this.history.slice(0, 10)
+    };
+  }
+
+  public getCurrentRound(): CrashRound {
+    return this.currentRound;
+  }
+
+  private createRound(): CrashRound {
+    this.nonce += 1;
+    const clientSeed = `aviator-zim:${this.nonce}`;
+    const { hash, crashPoint } = generateCrash(this.serverSeed, clientSeed, this.nonce, GAME_RULES.defaultHouseEdge);
+
+    return {
+      roundId: this.nonce,
+      hash,
+      crashPoint,
+      nonce: this.nonce,
+      clientSeed,
+      status: "starting",
+      elapsedMs: 0,
+      currentMultiplier: 1,
+      startedAt: new Date().toISOString()
+    };
+  }
+
+  private scheduleNextRound(delayMs: number) {
+    setTimeout(() => {
+      this.currentRound = this.createRound();
+      this.currentRound.status = "running";
+      const startedAtMs = Date.now();
+
+      this.interval = setInterval(() => {
+        const elapsedMs = Date.now() - startedAtMs;
+        const multiplier = getLiveMultiplier(elapsedMs);
+        this.currentRound.elapsedMs = elapsedMs;
+        this.currentRound.currentMultiplier = multiplier;
+        this.emit("round", this.getPublicState());
+
+        if (multiplier >= this.currentRound.crashPoint) {
+          this.crashCurrentRound();
+        }
+      }, 100);
+    }, delayMs);
+  }
+
+  private crashCurrentRound() {
+    if (this.interval) {
+      clearInterval(this.interval);
+      this.interval = undefined;
+    }
+
+    this.currentRound.status = "crashed";
+    this.currentRound.crashedAt = new Date().toISOString();
+    this.currentRound.currentMultiplier = this.currentRound.crashPoint;
+    this.history.unshift(this.currentRound.crashPoint);
+    this.history = this.history.slice(0, 20);
+    this.emit("crash", this.currentRound);
+    this.scheduleNextRound(3_000);
+  }
+
+  public override on<U extends keyof RoundEvents>(event: U, listener: RoundEvents[U]): this {
+    return super.on(event, listener);
+  }
+}

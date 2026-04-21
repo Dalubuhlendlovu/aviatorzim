@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-neutral-950 text-neutral-100 antialiased;
+  background-image: radial-gradient(circle at top, rgba(214, 40, 40, 0.18), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgba(255, 212, 71, 0.12), transparent 25%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.card {
+  @apply rounded-3xl border border-white/10 bg-white/5 backdrop-blur;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 212, 71, 0.3);
+  background: rgba(255, 212, 71, 0.1);
+  padding: 0.25rem 0.75rem;
+  color: #ffd447;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.grid-overlay {
+  background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 26px 26px;
+}

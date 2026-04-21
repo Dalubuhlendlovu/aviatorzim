@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlayMode {
+  demo
+  real
+}
+
+enum TransactionType {
+  deposit
+  withdrawal
+  bet
+  cashout
+  reward
+}
+
+enum BetStatus {
+  active
+  cashed_out
+  crashed
+}
+
+enum GameRoundStatus {
+  crashed
+}
+
+model User {
+  id              String        @id @default(cuid())
+  fullName        String
+  address         String
+  phoneNumber     String
+  email           String        @unique
+  passwordHash    String
+  isDemoAccount   Boolean       @default(false)
+  isAdmin         Boolean       @default(false)
+  balanceUsd      Decimal       @default(0)
+  demoBalanceUsd  Decimal       @default(10000)
+  level           Int           @default(1)
+  badge           String        @default("New Pilot")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  transactions    Transaction[]
+  bets            Bet[]
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  type        TransactionType
+  amountUsd   Decimal
+  status      String
+  provider    String?
+  reference   String?
+  pollUrl     String?         @unique
+  paynowReference String?
+  phoneNumber String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  creditedAt  DateTime?
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+model Bet {
+  id                String    @id @default(cuid())
+  roundNonce        Int
+  amountUsd         Decimal
+  autoCashOutAt     Decimal?
+  cashedOutAt       Decimal?
+  payoutUsd         Decimal?
+  crashMultiplier   Decimal?
+  status            BetStatus @default(active)
+  mode              PlayMode
+  createdAt         DateTime  @default(now())
+  settledAt         DateTime?
+  userId            String
+  user              User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([roundNonce, status])
+}
+
+model GameRound {
+  id         String          @id @default(cuid())
+  roundId    Int             @unique
+  hash       String          @unique
+  crashPoint Decimal
+  status     GameRoundStatus @default(crashed)
+  startedAt  DateTime
+  crashedAt  DateTime
+  createdAt  DateTime        @default(now())
+
+  @@index([crashedAt])
+}

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules
+pnpm-lock.yaml
+
+# Build outputs
+dist
+build
+.next
+out
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Misc
+.cache
+.turbo
+coverage
+
+# Docker/Podman
+.podman
+.docker
+
+# Prisma
+apps/server/prisma/migrations/dev.db*
+node_modules

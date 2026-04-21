@@ -1,0 +1,21 @@
+{
+  "name": "aviator-zim-game",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.8.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "db:up": "python -m podman_compose -f compose.yaml up -d postgres",
+    "db:down": "python -m podman_compose -f compose.yaml down",
+    "db:logs": "python -m podman_compose -f compose.yaml logs -f postgres",
+    "dev": "corepack pnpm --parallel --filter @aviator-zim/web --filter @aviator-zim/server dev",
+    "dev:web": "corepack pnpm --filter @aviator-zim/web dev",
+    "dev:server": "corepack pnpm --filter @aviator-zim/server dev",
+    "build": "corepack pnpm -r build",
+    "lint": "corepack pnpm -r lint",
+    "typecheck": "corepack pnpm -r typecheck"
+  }
+}

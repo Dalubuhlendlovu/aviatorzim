@@ -1,0 +1,14 @@
+- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+- [x] Clarify Project Requirements
+- [x] Scaffold the Project
+- [x] Customize the Project
+- [x] Install Required Extensions
+- [x] Compile the Project
+- [x] Create and Run Task
+- [ ] Launch the Project (deferred until user requests it)
+- [x] Ensure Documentation is Complete
+
+- Build the project in the current workspace root.
+- Use a TypeScript monorepo with `apps/web`, `apps/server`, and `packages/shared`.
+- Keep legal, responsible-gambling, and provably-fair information visible in the product.
+- Use placeholders for payment credentials until real production values are supplied.
