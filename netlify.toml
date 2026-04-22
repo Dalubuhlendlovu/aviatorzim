@@ -1,0 +1,11 @@
+[build]
+  command = "corepack pnpm install --frozen-lockfile && corepack pnpm --filter @aviator-zim/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PNPM_VERSION = "10.8.0"
+  NETLIFY_USE_PNPM = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
