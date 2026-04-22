@@ -27,17 +27,17 @@ const initialState: PublicRoundState = {
   history: [1.2, 2.4, 1.01]
 };
 
-const planePositions = [
+const dogPositions = [
   "translate-x-0 translate-y-0",
-  "translate-x-10 -translate-y-2",
-  "translate-x-16 -translate-y-4",
-  "translate-x-24 -translate-y-8",
-  "translate-x-32 -translate-y-12",
-  "translate-x-40 -translate-y-16",
-  "translate-x-52 -translate-y-20",
-  "translate-x-64 -translate-y-24",
-  "translate-x-72 -translate-y-28",
-  "translate-x-80 -translate-y-32"
+  "translate-x-8 -translate-y-1",
+  "translate-x-16 -translate-y-2",
+  "translate-x-24 -translate-y-4",
+  "translate-x-36 -translate-y-6",
+  "translate-x-48 -translate-y-9",
+  "translate-x-60 -translate-y-12",
+  "translate-x-72 -translate-y-15",
+  "translate-x-[21rem] -translate-y-[4.6rem]",
+  "translate-x-[25rem] -translate-y-[5.5rem]"
 ];
 
 interface DashboardSnapshot {
@@ -142,7 +142,7 @@ export function GameClient() {
     socket.on("round:crashed", () => {
       setActiveBet((currentBet) => {
         if (currentBet) {
-          setMessage("The plane crashed before your cash out. The bet was settled as a loss.");
+          setMessage("The dog vanished before your cash out. Your bet was settled as a loss.");
         }
 
         return null;
@@ -164,9 +164,9 @@ export function GameClient() {
     };
   }, []);
 
-  const planePositionClass = useMemo(() => {
-    const bucket = Math.min(planePositions.length - 1, Math.floor(state.currentMultiplier));
-    return planePositions[bucket];
+  const dogPositionClass = useMemo(() => {
+    const bucket = Math.min(dogPositions.length - 1, Math.floor(state.currentMultiplier));
+    return dogPositions[bucket];
   }, [state.currentMultiplier]);
 
   const canPlaceBet = betAmount >= GAME_RULES.minimumBetUsd && betAmount <= GAME_RULES.maximumBetUsd;
@@ -265,8 +265,8 @@ export function GameClient() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1.45fr_0.55fr]">
       <section className="space-y-6">
-        <div className="card grid-overlay relative overflow-hidden p-6 shadow-glow">
-          <div className="absolute inset-0 bg-gradient-to-br from-aviator.red/10 via-transparent to-aviator.yellow/10" />
+        <div className="card grid-overlay relative overflow-hidden p-6 shadow-glow danger-pulse">
+          <div className="absolute inset-0 bg-gradient-to-br from-aviator.red/20 via-transparent to-aviator.yellow/10" />
           <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="badge">Round #{state.roundId}</p>
@@ -274,7 +274,7 @@ export function GameClient() {
                 <span className={clsx(state.status === "crashed" ? "text-aviator.red" : "text-aviator.yellow")}>{state.currentMultiplier.toFixed(2)}x</span>
               </h1>
               <p className="mt-3 max-w-2xl text-sm text-neutral-300 sm:text-base">
-                Transparent house edge: {(GAME_RULES.defaultHouseEdge * 100).toFixed(1)}% • Demo balance: {currency(GAME_RULES.demoStartingBalanceUsd)} • RTP shown before every session.
+                Transparent house edge: {(GAME_RULES.defaultHouseEdge * 100).toFixed(1)}% • Demo balance: {currency(GAME_RULES.demoStartingBalanceUsd)} • RTP and fairness details remain visible each session.
               </p>
               {profile && (
                 <p className="mt-2 text-sm text-neutral-300">
@@ -288,12 +288,18 @@ export function GameClient() {
             </div>
           </div>
 
-          <div className="relative mt-10 h-72 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-sky-950 via-slate-950 to-black">
-            <div className="absolute bottom-0 h-16 w-full bg-gradient-to-r from-green-900/50 to-green-700/20" />
-            <div className={clsx("absolute left-10 top-10 text-6xl transition-transform duration-100", planePositionClass)}>
-              ✈️
+          <div className="speed-track relative mt-10 h-72 overflow-hidden rounded-3xl border border-white/10">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            <div className="absolute bottom-0 h-20 w-full bg-gradient-to-r from-red-900/30 via-orange-800/30 to-red-900/30" />
+            <div className={clsx("absolute left-8 top-24 text-6xl transition-transform duration-75", dogPositionClass, state.status === "crashed" && "opacity-0 scale-75 blur-sm")}>
+              🐕
             </div>
-            <div className="absolute bottom-6 left-6 text-sm text-neutral-300">Cash out before the crash. Gravity is undefeated.</div>
+            <div className="absolute left-8 top-7 text-xs uppercase tracking-[0.25em] text-amber-200/80">Speed lane</div>
+            <div className="absolute bottom-6 left-6 text-sm text-neutral-200">
+              {state.status === "crashed"
+                ? "The dog disappeared. Round over."
+                : "Cash out before the dog disappears."}
+            </div>
           </div>
         </div>
 
@@ -365,9 +371,9 @@ export function GameClient() {
           <div className="card p-5">
             <p className="text-sm uppercase tracking-[0.2em] text-neutral-400">Season events</p>
             <ul className="mt-4 space-y-3 text-sm text-neutral-200">
-              <li>Harare High Flyer tournament</li>
+              <li>Harare Sprint League</li>
               <li>Referral bonus campaign</li>
-              <li>Cosmetic trails & pilot badges</li>
+              <li>Cosmetic collars & runner badges</li>
               <li>Localized USD / ZWG support</li>
             </ul>
           </div>

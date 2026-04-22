@@ -25,7 +25,7 @@ export class GameEngine extends EventEmitter {
   }
 
   public start() {
-    this.scheduleNextRound(1_500);
+    this.scheduleNextRound(1_000);
   }
 
   public getPublicState(): PublicRoundState {
@@ -79,7 +79,7 @@ export class GameEngine extends EventEmitter {
         if (multiplier >= this.currentRound.crashPoint) {
           this.crashCurrentRound();
         }
-      }, 100);
+      }, 60);
     }, delayMs);
   }
 
@@ -95,7 +95,7 @@ export class GameEngine extends EventEmitter {
     this.history.unshift(this.currentRound.crashPoint);
     this.history = this.history.slice(0, 20);
     this.emit("crash", this.currentRound);
-    this.scheduleNextRound(3_000);
+    this.scheduleNextRound(2_000);
   }
 
   public override on<U extends keyof RoundEvents>(event: U, listener: RoundEvents[U]): this {

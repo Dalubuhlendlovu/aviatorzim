@@ -167,7 +167,7 @@ export interface VerificationResult {
 
 export function getLiveMultiplier(elapsedMs: number): number {
   const elapsedSeconds = elapsedMs / 1000;
-  return Math.max(1, Number(Math.exp(0.06 * elapsedSeconds).toFixed(2)));
+  return Math.max(1, Number(Math.exp(0.1 * elapsedSeconds).toFixed(2)));
 }
 
 export function currency(amount: number, currencyCode: CurrencyCode = "USD"): string {
