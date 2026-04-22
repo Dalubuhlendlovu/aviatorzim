@@ -161,34 +161,145 @@ export function GameClient() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prevMultRef = useRef(1);
   const lastACORef  = useRef<string|null>(null);
+  const fallbackTimerRef = useRef<number|undefined>(undefined);
+  const socketOnlineRef = useRef(false);
+  const fallbackRoundRef = useRef({
+    phase: "starting" as "starting" | "running" | "crashed",
+    roundId: 1,
+    phaseStartedAt: Date.now(),
+    crashAt: 2,
+  });
   const { playTick, playBetPlaced, playCashOut, playCrash } = useGameAudio();
 
   useMultiplierCanvas(canvasRef, state.currentMultiplier, state.status);
 
+  function stopFallbackSimulation() {
+    if (fallbackTimerRef.current !== undefined) {
+      window.clearInterval(fallbackTimerRef.current);
+      fallbackTimerRef.current = undefined;
+    }
+  }
+
+  function startFallbackSimulation() {
+    if (fallbackTimerRef.current !== undefined) return;
+
+    setMessage("Live server unavailable — running local simulation.");
+    fallbackRoundRef.current = {
+      phase: "starting",
+      roundId: Math.max(1, state.roundId || 1),
+      phaseStartedAt: Date.now(),
+      crashAt: Number((1.05 + Math.random() * 8.5).toFixed(2)),
+    };
+
+    fallbackTimerRef.current = window.setInterval(() => {
+      if (socketOnlineRef.current) {
+        stopFallbackSimulation();
+        return;
+      }
+
+      const sim = fallbackRoundRef.current;
+      const now = Date.now();
+
+      if (sim.phase === "starting") {
+        const elapsedMs = now - sim.phaseStartedAt;
+        setState((prev) => ({
+          ...prev,
+          roundId: sim.roundId,
+          status: "starting",
+          elapsedMs,
+          currentMultiplier: 1,
+          startedAt: new Date(sim.phaseStartedAt).toISOString(),
+        }));
+
+        if (elapsedMs >= 1000) {
+          sim.phase = "running";
+          sim.phaseStartedAt = now;
+          sim.crashAt = Number((1.05 + Math.random() * 8.5).toFixed(2));
+        }
+        return;
+      }
+
+      if (sim.phase === "running") {
+        const elapsedSeconds = (now - sim.phaseStartedAt) / 1000;
+        const live = Math.max(1, Number(Math.exp(0.1 * elapsedSeconds).toFixed(2)));
+        const current = Math.min(live, sim.crashAt);
+
+        setState((prev) => ({
+          ...prev,
+          roundId: sim.roundId,
+          status: "running",
+          elapsedMs: now - sim.phaseStartedAt,
+          currentMultiplier: current,
+          startedAt: new Date(sim.phaseStartedAt).toISOString(),
+        }));
+
+        if (current >= sim.crashAt) {
+          sim.phase = "crashed";
+          sim.phaseStartedAt = now;
+
+          setState((prev) => ({
+            ...prev,
+            status: "crashed",
+            currentMultiplier: sim.crashAt,
+            history: [sim.crashAt, ...prev.history].slice(0, 20),
+          }));
+
+          playCrash();
+          prevMultRef.current = 1;
+          setFlashCrash(true);
+          setTimeout(() => setFlashCrash(false), 600);
+        }
+        return;
+      }
+
+      if (now - sim.phaseStartedAt >= 1800) {
+        sim.phase = "starting";
+        sim.phaseStartedAt = now;
+        sim.roundId += 1;
+      }
+    }, 100);
+  }
+
   // ── data loaders ──────────────────────────────────────────────────────────
   async function loadWallet(token: string) {
-    const r = await fetch(`${API_URL}/api/me/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) return;
-    const d = await r.json() as DashboardSnap;
-    setProfile(d.profile);
+    try {
+      const r = await fetch(`${API_URL}/api/me/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) return;
+      const d = await r.json() as DashboardSnap;
+      setProfile(d.profile);
+    } catch {
+      // ignore transient network failure
+    }
   }
   async function loadActiveBet(token: string) {
-    const r = await fetch(`${API_URL}/api/me/game/active-bet`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) return;
-    const d = await r.json() as { activeBet: ActiveBetState|null };
-    setActiveBet(d.activeBet);
+    try {
+      const r = await fetch(`${API_URL}/api/me/game/active-bet`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) return;
+      const d = await r.json() as { activeBet: ActiveBetState|null };
+      setActiveBet(d.activeBet);
+    } catch {
+      // ignore transient network failure
+    }
   }
   async function loadBetHistory(token: string) {
-    const r = await fetch(`${API_URL}/api/me/game/history`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) return;
-    const d = await r.json() as BetHistorySnap;
-    setRecentBets(d.recentBets);
+    try {
+      const r = await fetch(`${API_URL}/api/me/game/history`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!r.ok) return;
+      const d = await r.json() as BetHistorySnap;
+      setRecentBets(d.recentBets);
+    } catch {
+      // ignore transient network failure
+    }
   }
   async function loadRoundHistory() {
-    const r = await fetch(`${API_URL}/api/game/history`);
-    if (!r.ok) return;
-    const d = await r.json() as RoundHistorySnap;
-    setRoundHistory(d.rounds);
+    try {
+      const r = await fetch(`${API_URL}/api/game/history`);
+      if (!r.ok) return;
+      const d = await r.json() as RoundHistorySnap;
+      setRoundHistory(d.rounds);
+    } catch {
+      // ignore transient network failure
+    }
   }
 
   // ── socket ────────────────────────────────────────────────────────────────
@@ -202,9 +313,27 @@ export function GameClient() {
     }
     void loadRoundHistory();
 
-    const socket = io(SOCKET_URL, { transports: ["websocket"] });
+    const socket = io(SOCKET_URL, { transports: ["websocket"], timeout: 5000, reconnectionAttempts: 4 });
+
+    socket.on("connect", () => {
+      socketOnlineRef.current = true;
+      stopFallbackSimulation();
+      setMessage("");
+    });
+
+    socket.on("connect_error", () => {
+      socketOnlineRef.current = false;
+      startFallbackSimulation();
+    });
+
+    socket.on("disconnect", () => {
+      socketOnlineRef.current = false;
+      startFallbackSimulation();
+    });
 
     socket.on("round:update", (payload: PublicRoundState) => {
+      socketOnlineRef.current = true;
+      stopFallbackSimulation();
       setState(payload);
       const prev = prevMultRef.current;
       const curr = payload.currentMultiplier;
@@ -231,7 +360,10 @@ export function GameClient() {
       setLeaderboard(p.leaderboard);
     });
 
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+      stopFallbackSimulation();
+    };
   }, []);
 
   // ── auto cash-out sync ────────────────────────────────────────────────────
@@ -270,6 +402,8 @@ export function GameClient() {
       await loadBetHistory(sessionToken);
       setMessage(`Bet of ${currency(betAmount)} placed.`);
       playBetPlaced();
+    } catch {
+      setMessage("Unable to place bet. Please check your connection.");
     } finally { setSubmitting(false); }
   }
 
@@ -287,6 +421,8 @@ export function GameClient() {
       await loadBetHistory(sessionToken);
       setMessage(`Cashed out: ${currency(d.payoutUsd ?? 0)}`);
       playCashOut();
+    } catch {
+      setMessage("Unable to cash out. Please check your connection.");
     } finally { setSubmitting(false); }
   }
 
