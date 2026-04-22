@@ -324,3 +324,29 @@ body {
     display: none;
   }
 }
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(245, 197, 24, 0.3), inset 0 0 10px rgba(245, 197, 24, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(245, 197, 24, 0.6), inset 0 0 20px rgba(245, 197, 24, 0.1);
+  }
+}
+
+.hero-title { animation: fadeInUp 0.8s ease-out 0.1s both; }
+.hero-subtitle { animation: fadeInUp 0.8s ease-out 0.3s both; }
+.hero-buttons { animation: fadeInUp 0.8s ease-out 0.5s both; }
+.game-preview { animation: fadeInUp 0.8s ease-out 0.7s both; }
+.glow-box { animation: glow 3s ease-in-out infinite; }
+
