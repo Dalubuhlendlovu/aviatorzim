@@ -14,8 +14,10 @@ import {
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import { DogSprite } from "./dog-sprite";
 import { API_URL, SOCKET_URL } from "../lib/api";
 import { getStoredSession } from "../lib/auth";
+import { useGameAudio } from "../lib/use-game-audio";
 
 const initialState: PublicRoundState = {
   roundId: 1,
@@ -67,6 +69,8 @@ export function GameClient() {
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const lastAutoCashOutSyncRef = useRef<string | null>(null);
+  const prevMultiplierRef = useRef(1);
+  const { playTick, playBetPlaced, playCashOut, playCrash } = useGameAudio();
 
   async function loadWallet(token: string) {
     const response = await fetch(`${API_URL}/api/me/dashboard`, {
@@ -138,8 +142,19 @@ export function GameClient() {
 
     const socket = io(SOCKET_URL, { transports: ["websocket"] });
 
-    socket.on("round:update", (payload: PublicRoundState) => setState(payload));
+    socket.on("round:update", (payload: PublicRoundState) => {
+      setState(payload);
+      // Tick sound at each whole-number multiplier milestone
+      const prev = prevMultiplierRef.current;
+      const curr = payload.currentMultiplier;
+      if (Math.floor(curr) > Math.floor(prev) && payload.status === "running") {
+        playTick(curr);
+      }
+      prevMultiplierRef.current = curr;
+    });
     socket.on("round:crashed", () => {
+      playCrash();
+      prevMultiplierRef.current = 1;
       setActiveBet((currentBet) => {
         if (currentBet) {
           setMessage("The dog vanished before your cash out. Your bet was settled as a loss.");
@@ -225,6 +240,7 @@ export function GameClient() {
       setProfile(data.profile as UserProfile);
       await loadBetHistory(sessionToken);
       setMessage(`Bet placed for ${currency(betAmount)} in ${mode} mode.`);
+      playBetPlaced();
     } finally {
       setIsSubmitting(false);
     }
@@ -257,12 +273,14 @@ export function GameClient() {
       setProfile(data.profile as UserProfile);
       await loadBetHistory(sessionToken);
       setMessage(`Cash out successful: ${currency(data.payoutUsd ?? 0)}.`);
+      playCashOut();
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
+    <>
     <div className="grid gap-6 lg:grid-cols-[1.45fr_0.55fr]">
       <section className="space-y-6">
         <div className="card grid-overlay relative overflow-hidden p-6 shadow-glow danger-pulse">
@@ -288,11 +306,17 @@ export function GameClient() {
             </div>
           </div>
 
-          <div className="speed-track relative mt-10 h-72 overflow-hidden rounded-3xl border border-white/10">
+          <div className="dog-track-wrapper speed-track relative mt-10 h-72 overflow-hidden rounded-3xl border border-white/10">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
             <div className="absolute bottom-0 h-20 w-full bg-gradient-to-r from-red-900/30 via-orange-800/30 to-red-900/30" />
-            <div className={clsx("absolute left-8 top-24 text-6xl transition-transform duration-75", dogPositionClass, state.status === "crashed" && "opacity-0 scale-75 blur-sm")}>
-              🐕
+            {/* Ground dashes */}
+            <div className="absolute bottom-[4.5rem] left-0 right-0 h-px bg-amber-500/20" />
+            <div className={clsx("absolute bottom-[4.8rem] transition-transform duration-75", dogPositionClass)}>
+              <DogSprite
+                running={state.status === "running"}
+                crashed={state.status === "crashed"}
+                multiplier={state.currentMultiplier}
+              />
             </div>
             <div className="absolute left-8 top-7 text-xs uppercase tracking-[0.25em] text-amber-200/80">Speed lane</div>
             <div className="absolute bottom-6 left-6 text-sm text-neutral-200">
@@ -457,5 +481,40 @@ export function GameClient() {
         </div>
       </aside>
     </div>
+
+    {/* Mobile floating bet bar — fixed bottom, hidden on lg+ */}
+    <div className="mobile-bet-bar lg:hidden">
+      <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-black/50 px-3 py-2">
+        <span className="text-xs text-neutral-400">Stake</span>
+        <input
+          type="number"
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold text-white focus:outline-none"
+          min={GAME_RULES.minimumBetUsd}
+          max={GAME_RULES.maximumBetUsd}
+          step="0.5"
+          aria-label="Stake amount"
+          value={betAmount}
+          onChange={(e) => setBetAmount(Number(e.target.value))}
+        />
+        <span className="text-xs text-neutral-400">USD</span>
+      </div>
+      <button
+        type="button"
+        className="flex-1 rounded-2xl bg-aviator-yellow px-4 py-3 text-sm font-bold text-black disabled:opacity-40"
+        disabled={!canPlaceBet || Boolean(activeBet) || state.status !== "running" || isSubmitting}
+        onClick={() => void handlePlaceBet()}
+      >
+        {activeBet ? "In" : "Bet"}
+      </button>
+      <button
+        type="button"
+        className="flex-1 rounded-2xl border border-red-500/40 bg-red-600/20 px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+        disabled={!activeBet || state.status !== "running" || isSubmitting}
+        onClick={() => void handleCashOut()}
+      >
+        Cash Out
+      </button>
+    </div>
+    </>
   );
 }

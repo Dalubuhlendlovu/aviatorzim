@@ -66,3 +66,90 @@ body {
     box-shadow: 0 0 28px rgba(248, 113, 113, 0.35);
   }
 }
+
+/* ── Dog sprite animations ───────────────────────────────────────── */
+
+/* Front-leg pair A swings forward, B swings back, alternating at run cadence */
+.dog-run .dog-front-leg-a {
+  transform-origin: 50px 40px;
+  animation: legSwingForward 0.28s ease-in-out infinite alternate;
+}
+.dog-run .dog-front-leg-b {
+  transform-origin: 58px 40px;
+  animation: legSwingBack 0.28s ease-in-out infinite alternate;
+}
+.dog-run .dog-back-leg-a {
+  transform-origin: 28px 40px;
+  animation: legSwingBack 0.28s ease-in-out infinite alternate;
+}
+.dog-run .dog-back-leg-b {
+  transform-origin: 34px 40px;
+  animation: legSwingForward 0.28s ease-in-out infinite alternate;
+}
+
+@keyframes legSwingForward {
+  from { transform: rotate(-28deg); }
+  to   { transform: rotate(28deg);  }
+}
+@keyframes legSwingBack {
+  from { transform: rotate(28deg);  }
+  to   { transform: rotate(-28deg); }
+}
+
+/* Body bounce while running */
+.dog-run {
+  animation: bodyBounce 0.28s ease-in-out infinite;
+}
+@keyframes bodyBounce {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-4px); }
+}
+
+/* Crash: dog spins + fades out */
+.dog-crash {
+  animation: dogCrash 0.45s ease-in forwards;
+}
+@keyframes dogCrash {
+  0%   { transform: scale(1)    rotate(0deg);    opacity: 1; }
+  60%  { transform: scale(1.25) rotate(40deg);   opacity: 0.6; }
+  100% { transform: scale(0.5)  rotate(90deg);   opacity: 0;   filter: blur(6px); }
+}
+
+/* Particle dust puffs (absolute pseudo elements via wrapper) */
+.dog-track-wrapper::after {
+  content: "";
+  position: absolute;
+  bottom: 18px;
+  left: calc(var(--dog-x, 2rem) + 1rem);
+  width: 48px;
+  height: 20px;
+  background: radial-gradient(ellipse at center, rgba(255,200,80,0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: dustPuff 0.28s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes dustPuff {
+  0%   { transform: scaleX(0.5) scaleY(0.3); opacity: 0.7; }
+  100% { transform: scaleX(2)   scaleY(1);   opacity: 0;   }
+}
+
+/* Mobile floating bet bar — hidden on large screens */
+.mobile-bet-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(9, 10, 17, 0.95);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+@media (min-width: 1024px) {
+  .mobile-bet-bar {
+    display: none;
+  }
+}
