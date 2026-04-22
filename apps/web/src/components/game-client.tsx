@@ -157,6 +157,7 @@ export function GameClient() {
   const [submitting,  setSubmitting]  = useState(false);
   const [sideTab,     setSideTab]     = useState<"chat"|"leaderboard"|"history">("history");
   const [flashCrash,  setFlashCrash]  = useState(false);
+  const [connectionMode, setConnectionMode] = useState<"live" | "simulated">("simulated");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prevMultRef = useRef(1);
@@ -183,6 +184,7 @@ export function GameClient() {
   function startFallbackSimulation() {
     if (fallbackTimerRef.current !== undefined) return;
 
+    setConnectionMode("simulated");
     setMessage("Live server unavailable — running local simulation.");
     fallbackRoundRef.current = {
       phase: "starting",
@@ -317,22 +319,26 @@ export function GameClient() {
 
     socket.on("connect", () => {
       socketOnlineRef.current = true;
+      setConnectionMode("live");
       stopFallbackSimulation();
       setMessage("");
     });
 
     socket.on("connect_error", () => {
       socketOnlineRef.current = false;
+      setConnectionMode("simulated");
       startFallbackSimulation();
     });
 
     socket.on("disconnect", () => {
       socketOnlineRef.current = false;
+      setConnectionMode("simulated");
       startFallbackSimulation();
     });
 
     socket.on("round:update", (payload: PublicRoundState) => {
       socketOnlineRef.current = true;
+      setConnectionMode("live");
       stopFallbackSimulation();
       setState(payload);
       const prev = prevMultRef.current;
@@ -459,6 +465,22 @@ export function GameClient() {
                 textTransform: "uppercase",
               }}>
                 {state.status}
+              </span>
+              <span
+                style={{
+                  padding: "0.15rem 0.5rem",
+                  borderRadius: 5,
+                  fontSize: "0.62rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  background: connectionMode === "live" ? "rgba(34,197,94,0.12)" : "rgba(245,197,24,0.12)",
+                  color: connectionMode === "live" ? "#4ade80" : "#f5c518",
+                  border: `1px solid ${connectionMode === "live" ? "rgba(34,197,94,0.3)" : "rgba(245,197,24,0.3)"}`,
+                }}
+                title={connectionMode === "live" ? "Connected to live server" : "Using local simulation fallback"}
+              >
+                {connectionMode === "live" ? "Live" : "Simulated"}
               </span>
             </div>
             <span style={{ fontSize: "0.7rem", color: "var(--c-muted)" }}>
