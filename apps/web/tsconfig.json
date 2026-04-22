@@ -22,8 +22,9 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    "../../../../.aviator-next/web/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

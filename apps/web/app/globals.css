@@ -4,7 +4,178 @@
 
 :root {
   color-scheme: dark;
+  --c-bg:      #0c0d12;
+  --c-surface: #13141c;
+  --c-border:  rgba(255,255,255,0.07);
+  --c-yellow:  #f5c518;
+  --c-red:     #e03535;
+  --c-green:   #22c55e;
+  --c-muted:   #5a5f7a;
 }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-bg);
+  color: #e8eaf0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+/* ─── Utility classes ─────────────────────────────────────────────── */
+
+.surface {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+}
+
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(245, 197, 24, 0.35);
+  background: rgba(245, 197, 24, 0.08);
+  padding: 0.2rem 0.65rem;
+  color: var(--c-yellow);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* crash history pill colours */
+.pill-low  { background: rgba(224,53,53,0.18);  color: #f87171; border: 1px solid rgba(224,53,53,0.3);  }
+.pill-mid  { background: rgba(245,197,24,0.12); color: #fbbf24; border: 1px solid rgba(245,197,24,0.25); }
+.pill-high { background: rgba(34,197,94,0.13);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25);  }
+
+/* ─── Multiplier display ─────────────────────────────────────────── */
+.mult-running { color: var(--c-yellow); text-shadow: 0 0 32px rgba(245,197,24,0.6); }
+.mult-crashed { color: var(--c-red);    text-shadow: 0 0 28px rgba(224,53,53,0.55); }
+.mult-starting{ color: #94a3b8; }
+
+/* ─── Canvas container ───────────────────────────────────────────── */
+.game-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  min-height: 220px;
+  background:
+    radial-gradient(ellipse at 20% 60%, rgba(245,197,24,0.04) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(224,53,53,0.05) 0%, transparent 50%),
+    var(--c-surface);
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+.game-canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+
+/* ─── Bet panel button states ────────────────────────────────────── */
+.btn-bet {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-bet:active { transform: scale(0.97); }
+.btn-bet:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.btn-bet-place  { background: var(--c-yellow); color: #0c0d12; }
+.btn-bet-cancel { background: rgba(224,53,53,0.15); color: #f87171; border: 1px solid rgba(224,53,53,0.3); }
+.btn-bet-cashout{ background: var(--c-green);  color: #0c0d12; }
+
+/* ─── Input ──────────────────────────────────────────────────────── */
+.field {
+  width: 100%;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  color: #e8eaf0;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field:focus { border-color: rgba(245,197,24,0.5); }
+
+/* ─── Tab toggle ─────────────────────────────────────────────────── */
+.tab-group { display: flex; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.3); }
+.tab-btn   { flex: 1; padding: 0.45rem 0; font-size: 0.78rem; font-weight: 600; border: none; cursor: pointer; color: var(--c-muted); background: transparent; transition: background 0.15s, color 0.15s; }
+.tab-btn.active { background: rgba(245,197,24,0.14); color: var(--c-yellow); }
+
+/* ─── Quick stake chips ──────────────────────────────────────────── */
+.chip {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--c-border);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.chip:hover { background: rgba(245,197,24,0.12); color: var(--c-yellow); border-color: rgba(245,197,24,0.3); }
+
+/* ─── Live-bets table ────────────────────────────────────────────── */
+.bets-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.bets-table th { color: var(--c-muted); font-weight: 600; padding: 0.4rem 0.5rem; text-align: left; border-bottom: 1px solid var(--c-border); }
+.bets-table td { padding: 0.38rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: #c8cce0; }
+.bets-table tr:last-child td { border-bottom: none; }
+.bets-table .td-mult { font-weight: 700; }
+.bets-table .td-won  { color: var(--c-green); }
+.bets-table .td-lost { color: #f87171; }
+
+/* ─── Dog sprite ─────────────────────────────────────────────────── */
+.dog-run .dog-front-leg-a { transform-origin: 50px 40px; animation: legSwingForward 0.26s ease-in-out infinite alternate; }
+.dog-run .dog-front-leg-b { transform-origin: 58px 40px; animation: legSwingBack    0.26s ease-in-out infinite alternate; }
+.dog-run .dog-back-leg-a  { transform-origin: 28px 40px; animation: legSwingBack    0.26s ease-in-out infinite alternate; }
+.dog-run .dog-back-leg-b  { transform-origin: 34px 40px; animation: legSwingForward 0.26s ease-in-out infinite alternate; }
+@keyframes legSwingForward { from { transform: rotate(-28deg); } to { transform: rotate(28deg); } }
+@keyframes legSwingBack    { from { transform: rotate(28deg);  } to { transform: rotate(-28deg); } }
+.dog-run  { animation: bodyBounce 0.26s ease-in-out infinite; }
+@keyframes bodyBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.dog-crash { animation: dogCrash 0.5s ease-in forwards; }
+@keyframes dogCrash {
+  0%   { transform: scale(1)    rotate(0deg);  opacity: 1; }
+  60%  { transform: scale(1.3)  rotate(45deg); opacity: 0.5; }
+  100% { transform: scale(0.3)  rotate(90deg); opacity: 0; filter: blur(8px); }
+}
+
+/* ─── Mobile sticky bet bar ──────────────────────────────────────── */
+.mobile-bet-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+  display: flex; gap: 0.5rem; padding: 0.65rem 0.85rem;
+  background: rgba(13,14,20,0.97);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--c-border);
+}
+@media (min-width: 1024px) { .mobile-bet-bar { display: none; } }
+
+/* ─── Crash flash ────────────────────────────────────────────────── */
+.crash-flash { animation: crashFlash 0.55s ease-out; }
+@keyframes crashFlash {
+  0%  { background-color: rgba(224,53,53,0.22); }
+  100%{ background-color: transparent; }
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 9999px; }
+
 
 body {
   @apply bg-neutral-950 text-neutral-100 antialiased;

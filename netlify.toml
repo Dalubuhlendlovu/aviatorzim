@@ -6,6 +6,7 @@
   NODE_VERSION = "20"
   PNPM_VERSION = "10.8.0"
   NETLIFY_USE_PNPM = "true"
+  NEXT_DIST_DIR = ".next"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
