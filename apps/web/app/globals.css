@@ -356,7 +356,7 @@ body {
     opacity: 0.92;
   }
   50% {
-    transform: scale(1.18);
+    transform: scale(1.12);
     opacity: 0.72;
   }
 }
@@ -367,7 +367,7 @@ body {
   height: 0.42rem;
   border-radius: 9999px;
   margin-right: 0.35rem;
-  animation: statusDotPulse 1.7s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: statusDotPulse 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .status-pill-dot.live {
