@@ -8,6 +8,7 @@ import {
   type ChatMessage,
   type LeaderboardEntry,
   type PublicRoundState,
+  type RoundVerificationResult,
   type RoundHistoryEntry,
   type UserProfile
 } from "@aviator-zim/shared";
@@ -155,6 +156,7 @@ export function GameClient() {
   const [activeBet,   setActiveBet]   = useState<ActiveBetState|null>(null);
   const [recentBets,  setRecentBets]  = useState<BetHistoryEntry[]>([]);
   const [roundHistory,setRoundHistory]= useState<RoundHistoryEntry[]>([]);
+  const [roundVerifyStatus, setRoundVerifyStatus] = useState<Record<number, "verified" | "not-verifiable">>({});
   const [submitting,  setSubmitting]  = useState(false);
   const [sideTab,     setSideTab]     = useState<"chat"|"leaderboard"|"history">("history");
   const [flashCrash,  setFlashCrash]  = useState(false);
@@ -179,6 +181,7 @@ export function GameClient() {
   const lastConnectionModeRef = useRef<"live" | "simulated">("simulated");
   const modeSoundReadyRef = useRef(false);
   const soundEnabledRef = useRef(true);
+  const verifyRequestedRef = useRef<Set<number>>(new Set());
   const fallbackRoundRef = useRef({
     phase: "starting" as "starting" | "running" | "crashed",
     roundId: 1,
@@ -197,6 +200,32 @@ export function GameClient() {
       // ignore storage write issues
     }
   }, [soundEnabled]);
+
+  useEffect(() => {
+    const roundIds = roundHistory.slice(0, 20).map((round) => round.roundId);
+    if (roundIds.length === 0) return;
+
+    for (const roundId of roundIds) {
+      if (verifyRequestedRef.current.has(roundId)) continue;
+      verifyRequestedRef.current.add(roundId);
+
+      void (async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/game/verify/${roundId}`);
+          if (!response.ok) {
+            setRoundVerifyStatus((prev) => ({ ...prev, [roundId]: "not-verifiable" }));
+            return;
+          }
+
+          const payload = await response.json() as RoundVerificationResult;
+          const isVerified = payload.matches.seedCommitment && payload.matches.outcomeHash && payload.matches.crashPoint;
+          setRoundVerifyStatus((prev) => ({ ...prev, [roundId]: isVerified ? "verified" : "not-verifiable" }));
+        } catch {
+          setRoundVerifyStatus((prev) => ({ ...prev, [roundId]: "not-verifiable" }));
+        }
+      })();
+    }
+  }, [roundHistory]);
 
   useEffect(() => {
     // Skip initial mount to avoid autoplay-policy errors and unwanted startup ping.
@@ -611,7 +640,49 @@ export function GameClient() {
                   )}
                   {roundHistory.map(r => (
                     <tr key={`${r.roundId}-${r.hash}`}>
-                      <td>#{r.roundId}</td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span>#{r.roundId}</span>
+                          {roundVerifyStatus[r.roundId] === "verified" && (
+                            <span
+                              style={{
+                                fontSize: "0.62rem",
+                                fontWeight: 700,
+                                letterSpacing: "0.05em",
+                                textTransform: "uppercase",
+                                color: "#4ade80",
+                                background: "rgba(34,197,94,0.12)",
+                                border: "1px solid rgba(34,197,94,0.3)",
+                                borderRadius: 9999,
+                                padding: "0.1rem 0.4rem",
+                                whiteSpace: "nowrap"
+                              }}
+                              title="Seed commitment and recomputation checks passed"
+                            >
+                              Verified ✅
+                            </span>
+                          )}
+                          {roundVerifyStatus[r.roundId] === "not-verifiable" && (
+                            <span
+                              style={{
+                                fontSize: "0.62rem",
+                                fontWeight: 700,
+                                letterSpacing: "0.05em",
+                                textTransform: "uppercase",
+                                color: "#f5c518",
+                                background: "rgba(245,197,24,0.12)",
+                                border: "1px solid rgba(245,197,24,0.3)",
+                                borderRadius: 9999,
+                                padding: "0.1rem 0.4rem",
+                                whiteSpace: "nowrap"
+                              }}
+                              title="Verification data unavailable or mismatch"
+                            >
+                              Not verifiable ⚠️
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className={clsx("td-mult", r.crashPoint >= 2 ? "td-won" : "td-lost")}>{r.crashPoint.toFixed(2)}x</td>
                       <td>{new Date(r.startedAt).toLocaleTimeString()}</td>
                     </tr>
