@@ -728,7 +728,7 @@ export function GameClient() {
           </label>
           <input
             type="number" className="field" style={{ marginTop: 4 }}
-            min="1.01" step="0.01" placeholder="e.g. 2.00"
+            min="1.01" max={GAME_RULES.maxRiskMultiplierForExposure} step="0.01" placeholder="e.g. 2.00"
             value={autoCashOut}
             onChange={e => setAutoCashOut(e.target.value ? Number(e.target.value) : "")}
           />
@@ -767,7 +767,7 @@ export function GameClient() {
           )}
 
           <p style={{ marginTop: 10, fontSize: "0.65rem", color: "var(--c-muted)", lineHeight: 1.6 }}>
-            Min {currency(GAME_RULES.minimumBetUsd)} · Max {currency(GAME_RULES.maximumBetUsd)} · House edge {(GAME_RULES.defaultHouseEdge*100).toFixed(1)}%
+            Min {currency(GAME_RULES.minimumBetUsd)} · Max {currency(GAME_RULES.maximumBetUsd)} · House edge {(GAME_RULES.defaultHouseEdge*100).toFixed(1)}% · Auto cap {GAME_RULES.maxRiskMultiplierForExposure}x
           </p>
         </div>
 

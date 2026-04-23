@@ -3,6 +3,7 @@ import { GAME_RULES, type PlayMode } from "@aviator-zim/shared";
 import { z } from "zod";
 import {
   cashOutCrashBet,
+  getActiveRoundExposure,
   getActiveBetForUser,
   getBetHistoryForUser,
   placeCrashBet
@@ -12,7 +13,7 @@ import { GameEngine } from "../services/gameEngine.js";
 const placeBetSchema = z.object({
   amountUsd: z.coerce.number().min(GAME_RULES.minimumBetUsd).max(GAME_RULES.maximumBetUsd),
   mode: z.enum(["demo", "real"]),
-  autoCashOutMultiplier: z.coerce.number().min(1.01).max(100).optional()
+  autoCashOutMultiplier: z.coerce.number().min(1.01).max(GAME_RULES.maxRiskMultiplierForExposure).optional()
 });
 
 export function createGameRouter(gameEngine: GameEngine) {
@@ -54,10 +55,34 @@ export function createGameRouter(gameEngine: GameEngine) {
     }
 
     const currentRound = gameEngine.getCurrentRound();
-    const currentMultiplier = currentRound.currentMultiplier;
-
-    if (currentRound.status === "crashed" || currentMultiplier > 1.1) {
+    if (currentRound.status !== "running") {
       return res.status(400).json({ error: "Betting window has closed for this round." });
+    }
+
+    if (currentRound.elapsedMs > GAME_RULES.bettingWindowCloseMs) {
+      return res.status(400).json({ error: "Betting window has closed for this round." });
+    }
+
+    const requestedTargetMultiplier = Math.max(
+      1,
+      Math.min(
+        parsed.data.autoCashOutMultiplier ?? GAME_RULES.maxRiskMultiplierForExposure,
+        GAME_RULES.maxRiskMultiplierForExposure
+      )
+    );
+    const requestedPotentialPayoutUsd = Number((parsed.data.amountUsd * requestedTargetMultiplier).toFixed(2));
+
+    if (requestedPotentialPayoutUsd > GAME_RULES.maxPotentialPayoutPerBetUsd) {
+      return res.status(400).json({
+        error: `Bet exceeds per-bet risk limit of $${GAME_RULES.maxPotentialPayoutPerBetUsd.toFixed(2)} potential payout.`
+      });
+    }
+
+    const currentExposure = await getActiveRoundExposure(currentRound.nonce);
+    if (currentExposure.totalPotentialPayoutUsd + requestedPotentialPayoutUsd > GAME_RULES.maxPotentialPayoutPerRoundUsd) {
+      return res.status(400).json({
+        error: "Round risk limit reached. Please try the next round or reduce stake/auto cash-out."
+      });
     }
 
     try {

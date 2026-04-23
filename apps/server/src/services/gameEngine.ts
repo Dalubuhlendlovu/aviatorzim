@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { randomBytes } from "node:crypto";
 import {
   GAME_RULES,
   getLiveMultiplier,
@@ -13,7 +14,6 @@ interface RoundEvents {
 }
 
 export class GameEngine extends EventEmitter {
-  private serverSeed = crypto.randomUUID();
   private nonce = 0;
   private currentRound: CrashRound;
   private history: number[] = [1.14, 2.48, 1.01, 3.62, 1.87, 6.2];
@@ -47,8 +47,9 @@ export class GameEngine extends EventEmitter {
 
   private createRound(): CrashRound {
     this.nonce += 1;
-    const clientSeed = `aviator-zim:${this.nonce}`;
-    const { hash, crashPoint } = generateCrash(this.serverSeed, clientSeed, this.nonce, GAME_RULES.defaultHouseEdge);
+    const serverSeed = randomBytes(32).toString("hex");
+    const clientSeed = randomBytes(16).toString("hex");
+    const { hash, crashPoint } = generateCrash(serverSeed, clientSeed, this.nonce, GAME_RULES.defaultHouseEdge);
 
     return {
       roundId: this.nonce,
@@ -74,11 +75,13 @@ export class GameEngine extends EventEmitter {
         const multiplier = getLiveMultiplier(elapsedMs);
         this.currentRound.elapsedMs = elapsedMs;
         this.currentRound.currentMultiplier = multiplier;
-        this.emit("round", this.getPublicState());
 
         if (multiplier >= this.currentRound.crashPoint) {
           this.crashCurrentRound();
+          return;
         }
+
+        this.emit("round", this.getPublicState());
       }, 60);
     }, delayMs);
   }

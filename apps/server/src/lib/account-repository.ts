@@ -666,6 +666,49 @@ export async function getRecentRoundHistory(limit = 20) {
   return rounds.map(toRoundHistoryEntry);
 }
 
+export async function getRoundByRoundId(roundId: number) {
+  const round = await prisma.gameRound.findUnique({ where: { roundId } });
+  return round ? toRoundHistoryEntry(round) : null;
+}
+
+export async function getActiveRoundExposure(roundNonce: number) {
+  const activeBets = await prisma.bet.findMany({
+    where: {
+      roundNonce,
+      status: PrismaBetStatus.active
+    },
+    select: {
+      amountUsd: true,
+      autoCashOutAt: true
+    }
+  });
+
+  const totals = activeBets.reduce(
+    (acc, bet) => {
+      const stake = toNumber(bet.amountUsd) ?? 0;
+      const targetMultiplier = Math.max(
+        1,
+        Math.min(
+          toNumber(bet.autoCashOutAt) ?? GAME_RULES.maxRiskMultiplierForExposure,
+          GAME_RULES.maxRiskMultiplierForExposure
+        )
+      );
+      const potentialPayoutUsd = Number((stake * targetMultiplier).toFixed(2));
+
+      acc.totalStakeUsd += stake;
+      acc.totalPotentialPayoutUsd += potentialPayoutUsd;
+      return acc;
+    },
+    { totalStakeUsd: 0, totalPotentialPayoutUsd: 0 }
+  );
+
+  return {
+    totalStakeUsd: Number(totals.totalStakeUsd.toFixed(2)),
+    totalPotentialPayoutUsd: Number(totals.totalPotentialPayoutUsd.toFixed(2)),
+    activeBetsCount: activeBets.length
+  };
+}
+
 export async function approveWithdrawal(transactionId: string) {
   const transaction = await prisma.transaction.findUnique({
     where: { id: transactionId },
