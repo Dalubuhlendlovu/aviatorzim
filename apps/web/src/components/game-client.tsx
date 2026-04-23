@@ -158,6 +158,7 @@ export function GameClient() {
   const [sideTab,     setSideTab]     = useState<"chat"|"leaderboard"|"history">("history");
   const [flashCrash,  setFlashCrash]  = useState(false);
   const [connectionMode, setConnectionMode] = useState<"live" | "simulated">("simulated");
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prevMultRef = useRef(1);
@@ -166,6 +167,7 @@ export function GameClient() {
   const socketOnlineRef = useRef(false);
   const lastConnectionModeRef = useRef<"live" | "simulated">("simulated");
   const modeSoundReadyRef = useRef(false);
+  const soundEnabledRef = useRef(true);
   const fallbackRoundRef = useRef({
     phase: "starting" as "starting" | "running" | "crashed",
     roundId: 1,
@@ -177,6 +179,10 @@ export function GameClient() {
   useMultiplierCanvas(canvasRef, state.currentMultiplier, state.status);
 
   useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
+
+  useEffect(() => {
     // Skip initial mount to avoid autoplay-policy errors and unwanted startup ping.
     if (!modeSoundReadyRef.current) {
       modeSoundReadyRef.current = true;
@@ -185,8 +191,10 @@ export function GameClient() {
     }
     if (lastConnectionModeRef.current === connectionMode) return;
 
-    if (connectionMode === "live") playModeLive();
-    else playModeSimulated();
+    if (soundEnabledRef.current) {
+      if (connectionMode === "live") playModeLive();
+      else playModeSimulated();
+    }
 
     lastConnectionModeRef.current = connectionMode;
   }, [connectionMode, playModeLive, playModeSimulated]);
@@ -263,7 +271,7 @@ export function GameClient() {
             history: [sim.crashAt, ...prev.history].slice(0, 20),
           }));
 
-          playCrash();
+          if (soundEnabledRef.current) playCrash();
           prevMultRef.current = 1;
           setFlashCrash(true);
           setTimeout(() => setFlashCrash(false), 600);
@@ -360,12 +368,12 @@ export function GameClient() {
       setState(payload);
       const prev = prevMultRef.current;
       const curr = payload.currentMultiplier;
-      if (payload.status === "running" && Math.floor(curr) > Math.floor(prev)) playTick(curr);
+      if (payload.status === "running" && Math.floor(curr) > Math.floor(prev) && soundEnabledRef.current) playTick(curr);
       prevMultRef.current = curr;
     });
 
     socket.on("round:crashed", () => {
-      playCrash();
+      if (soundEnabledRef.current) playCrash();
       prevMultRef.current = 1;
       setFlashCrash(true);
       setTimeout(() => setFlashCrash(false), 600);
@@ -424,7 +432,7 @@ export function GameClient() {
       setProfile(d.profile as UserProfile);
       await loadBetHistory(sessionToken);
       setMessage(`Bet of ${currency(betAmount)} placed.`);
-      playBetPlaced();
+      if (soundEnabledRef.current) playBetPlaced();
     } catch {
       setMessage("Unable to place bet. Please check your connection.");
     } finally { setSubmitting(false); }
@@ -443,7 +451,7 @@ export function GameClient() {
       setProfile(d.profile as UserProfile);
       await loadBetHistory(sessionToken);
       setMessage(`Cashed out: ${currency(d.payoutUsd ?? 0)}`);
-      playCashOut();
+      if (soundEnabledRef.current) playCashOut();
     } catch {
       setMessage("Unable to cash out. Please check your connection.");
     } finally { setSubmitting(false); }
@@ -501,9 +509,34 @@ export function GameClient() {
                 {connectionMode === "live" ? "Live" : "Simulated"}
               </span>
             </div>
-            <span style={{ fontSize: "0.7rem", color: "var(--c-muted)" }}>
-              House edge {(GAME_RULES.defaultHouseEdge * 100).toFixed(1)}% · RTP visible
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "0.7rem", color: "var(--c-muted)" }}>
+                House edge {(GAME_RULES.defaultHouseEdge * 100).toFixed(1)}% · RTP visible
+              </span>
+              <button
+                type="button"
+                onClick={() => setSoundEnabled((prev) => !prev)}
+                title={soundEnabled ? "Mute game sounds" : "Unmute game sounds"}
+                aria-label={soundEnabled ? "Sound On" : "Sound Off"}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  borderRadius: 6,
+                  border: "1px solid var(--c-border)",
+                  background: soundEnabled ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.06)",
+                  color: soundEnabled ? "#4ade80" : "#94a3b8",
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.18rem 0.42rem",
+                  cursor: "pointer",
+                }}
+              >
+                {soundEnabled ? "🔊 On" : "🔇 Off"}
+              </button>
+            </div>
           </div>
 
           {/* Canvas */}
