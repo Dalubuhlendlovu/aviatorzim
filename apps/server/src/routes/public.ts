@@ -1,5 +1,7 @@
 import { Router } from "express";
-import { getDashboardData, getRecentRoundHistory, getRoundByRoundId } from "../lib/account-repository.js";
+import { GAME_RULES, type RoundVerificationResult } from "@aviator-zim/shared";
+import { generateCrash, hashSeed } from "@aviator-zim/shared/provably-fair";
+import { getDashboardData, getRecentRoundHistory, getRoundVerificationRecord } from "../lib/account-repository.js";
 import { liveChat, leaderboard } from "../lib/store.js";
 import { GameEngine } from "../services/gameEngine.js";
 
@@ -25,21 +27,44 @@ export function createPublicRouter(gameEngine: GameEngine) {
       return res.status(400).json({ error: "Nonce must be a positive integer." });
     }
 
-    const round = await getRoundByRoundId(nonce);
+    const round = await getRoundVerificationRecord(nonce);
     if (!round) {
       return res.status(404).json({ error: "Round not found." });
     }
 
-    return res.json({
+    if (!round.serverSeed || !round.clientSeed || !round.seedHash || !round.nonce) {
+      return res.status(409).json({
+        error: "Verification data is unavailable for this round record.",
+        roundId: round.roundId
+      });
+    }
+
+    const recomputed = generateCrash(round.serverSeed, round.clientSeed, round.nonce, GAME_RULES.defaultHouseEdge);
+    const recomputedSeedHash = hashSeed(round.serverSeed);
+    const storedCrashPoint = Number(round.crashPoint.toString());
+
+    const payload: RoundVerificationResult = {
       roundId: round.roundId,
-      hash: round.hash,
-      crashPoint: round.crashPoint,
-      startedAt: round.startedAt,
-      crashedAt: round.crashedAt,
-      status: round.status,
-      verificationMethod: "record-hash",
-      note: "Server-seed reveal verification is not enabled in this build. This endpoint validates immutable round record data only."
-    });
+      nonce: round.nonce,
+      houseEdge: GAME_RULES.defaultHouseEdge,
+      clientSeed: round.clientSeed,
+      serverSeed: round.serverSeed,
+      seedHash: round.seedHash,
+      outcomeHash: round.hash,
+      crashPoint: storedCrashPoint,
+      recomputed: {
+        seedHash: recomputedSeedHash,
+        outcomeHash: recomputed.hash,
+        crashPoint: recomputed.crashPoint
+      },
+      matches: {
+        seedCommitment: recomputedSeedHash === round.seedHash,
+        outcomeHash: recomputed.hash === round.hash,
+        crashPoint: Number(recomputed.crashPoint.toFixed(2)) === Number(storedCrashPoint.toFixed(2))
+      }
+    };
+
+    return res.json(payload);
   });
 
   router.get("/dashboard/:userId", async (req, res) => {

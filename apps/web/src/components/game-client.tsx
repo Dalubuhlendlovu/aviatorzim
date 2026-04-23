@@ -37,7 +37,7 @@ const QUICK_STAKES = [0.5, 1, 2, 5, 10, 25];
 const SOUND_PREF_KEY = "aviator:soundEnabled";
 
 const INIT: PublicRoundState = {
-  roundId: 0, hash: "", status: "starting",
+  roundId: 0, hash: "", seedHash: "", status: "starting",
   elapsedMs: 0, currentMultiplier: 1,
   startedAt: new Date().toISOString(), history: [3.21, 1.04, 8.67, 1.98, 2.34, 1.22],
 };

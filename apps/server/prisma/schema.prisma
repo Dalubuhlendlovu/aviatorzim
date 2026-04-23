@@ -91,6 +91,10 @@ model GameRound {
   id         String          @id @default(cuid())
   roundId    Int             @unique
   hash       String          @unique
+  seedHash   String?
+  serverSeed String?
+  clientSeed String?
+  nonce      Int?
   crashPoint Decimal
   status     GameRoundStatus @default(crashed)
   startedAt  DateTime

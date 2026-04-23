@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import { GAME_RULES, type VerificationResult } from "./index.js";
 
+export function hashSeed(serverSeed: string): string {
+  return crypto.createHash("sha256").update(serverSeed).digest("hex");
+}
+
 export function generateHash(serverSeed: string, clientSeed: string, nonce: number): string {
   return crypto.createHmac("sha256", serverSeed).update(`${clientSeed}:${nonce}`).digest("hex");
 }

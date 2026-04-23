@@ -49,6 +49,8 @@ export interface LeaderboardEntry {
 export interface CrashRound {
   roundId: number;
   hash: string;
+  seedHash: string;
+  serverSeed?: string;
   crashPoint: number;
   nonce: number;
   clientSeed: string;
@@ -62,6 +64,7 @@ export interface CrashRound {
 export interface PublicRoundState {
   roundId: number;
   hash: string;
+  seedHash: string;
   status: RoundStatus;
   elapsedMs: number;
   currentMultiplier: number;
@@ -96,10 +99,32 @@ export interface BetHistoryEntry extends ActiveBetState {
 export interface RoundHistoryEntry {
   roundId: number;
   hash: string;
+  seedHash?: string;
   crashPoint: number;
   startedAt: string;
   crashedAt?: string;
   status: RoundStatus;
+}
+
+export interface RoundVerificationResult {
+  roundId: number;
+  nonce: number;
+  houseEdge: number;
+  clientSeed: string;
+  serverSeed: string;
+  seedHash: string;
+  outcomeHash: string;
+  crashPoint: number;
+  recomputed: {
+    seedHash: string;
+    outcomeHash: string;
+    crashPoint: number;
+  };
+  matches: {
+    seedCommitment: boolean;
+    outcomeHash: boolean;
+    crashPoint: boolean;
+  };
 }
 
 export interface AdminRoundAnalyticsEntry extends RoundHistoryEntry {

@@ -100,6 +100,7 @@ function toRoundHistoryEntry(round: GameRound): RoundHistoryEntry {
   return {
     roundId: round.roundId,
     hash: round.hash,
+    seedHash: round.seedHash ?? undefined,
     crashPoint: toNumber(round.crashPoint) ?? 0,
     startedAt: round.startedAt.toISOString(),
     crashedAt: round.crashedAt.toISOString(),
@@ -587,6 +588,10 @@ export async function finalizeCrashedRound(round: CrashRound) {
       where: { roundId: round.roundId },
       update: {
         hash: round.hash,
+        seedHash: round.seedHash,
+        serverSeed: round.serverSeed,
+        clientSeed: round.clientSeed,
+        nonce: round.nonce,
         crashPoint: decimal(round.crashPoint),
         status: GameRoundStatus.crashed,
         startedAt: new Date(round.startedAt),
@@ -595,6 +600,10 @@ export async function finalizeCrashedRound(round: CrashRound) {
       create: {
         roundId: round.roundId,
         hash: round.hash,
+        seedHash: round.seedHash,
+        serverSeed: round.serverSeed,
+        clientSeed: round.clientSeed,
+        nonce: round.nonce,
         crashPoint: decimal(round.crashPoint),
         status: GameRoundStatus.crashed,
         startedAt: new Date(round.startedAt),
@@ -669,6 +678,24 @@ export async function getRecentRoundHistory(limit = 20) {
 export async function getRoundByRoundId(roundId: number) {
   const round = await prisma.gameRound.findUnique({ where: { roundId } });
   return round ? toRoundHistoryEntry(round) : null;
+}
+
+export async function getRoundVerificationRecord(roundId: number) {
+  return prisma.gameRound.findUnique({
+    where: { roundId },
+    select: {
+      roundId: true,
+      nonce: true,
+      hash: true,
+      seedHash: true,
+      serverSeed: true,
+      clientSeed: true,
+      crashPoint: true,
+      status: true,
+      startedAt: true,
+      crashedAt: true
+    }
+  });
 }
 
 export async function getActiveRoundExposure(roundNonce: number) {

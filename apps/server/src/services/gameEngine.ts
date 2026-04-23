@@ -6,7 +6,7 @@ import {
   type CrashRound,
   type PublicRoundState
 } from "@aviator-zim/shared";
-import { generateCrash } from "@aviator-zim/shared/provably-fair";
+import { generateCrash, hashSeed } from "@aviator-zim/shared/provably-fair";
 
 interface RoundEvents {
   round: (state: PublicRoundState) => void;
@@ -32,6 +32,7 @@ export class GameEngine extends EventEmitter {
     return {
       roundId: this.currentRound.roundId,
       hash: this.currentRound.hash,
+      seedHash: this.currentRound.seedHash,
       status: this.currentRound.status,
       elapsedMs: this.currentRound.elapsedMs,
       currentMultiplier: this.currentRound.currentMultiplier,
@@ -48,12 +49,15 @@ export class GameEngine extends EventEmitter {
   private createRound(): CrashRound {
     this.nonce += 1;
     const serverSeed = randomBytes(32).toString("hex");
+    const seedHash = hashSeed(serverSeed);
     const clientSeed = randomBytes(16).toString("hex");
     const { hash, crashPoint } = generateCrash(serverSeed, clientSeed, this.nonce, GAME_RULES.defaultHouseEdge);
 
     return {
       roundId: this.nonce,
       hash,
+      seedHash,
+      serverSeed,
       crashPoint,
       nonce: this.nonce,
       clientSeed,
