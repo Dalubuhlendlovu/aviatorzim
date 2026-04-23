@@ -34,6 +34,7 @@ function multClass(status: string) {
 }
 
 const QUICK_STAKES = [0.5, 1, 2, 5, 10, 25];
+const SOUND_PREF_KEY = "aviator:soundEnabled";
 
 const INIT: PublicRoundState = {
   roundId: 0, hash: "", status: "starting",
@@ -158,7 +159,17 @@ export function GameClient() {
   const [sideTab,     setSideTab]     = useState<"chat"|"leaderboard"|"history">("history");
   const [flashCrash,  setFlashCrash]  = useState(false);
   const [connectionMode, setConnectionMode] = useState<"live" | "simulated">("simulated");
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const saved = window.localStorage.getItem(SOUND_PREF_KEY);
+      if (saved === "off") return false;
+      if (saved === "on") return true;
+    } catch {
+      // ignore storage read issues and default to enabled
+    }
+    return true;
+  });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const prevMultRef = useRef(1);
@@ -180,6 +191,11 @@ export function GameClient() {
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled;
+    try {
+      window.localStorage.setItem(SOUND_PREF_KEY, soundEnabled ? "on" : "off");
+    } catch {
+      // ignore storage write issues
+    }
   }, [soundEnabled]);
 
   useEffect(() => {
