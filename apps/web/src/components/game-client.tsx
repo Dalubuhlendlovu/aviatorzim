@@ -480,6 +480,7 @@ export function GameClient() {
                 }}
                 title={connectionMode === "live" ? "Connected to live server" : "Using local simulation fallback"}
               >
+                <span className={clsx("status-pill-dot", connectionMode === "live" ? "live" : "simulated")} />
                 {connectionMode === "live" ? "Live" : "Simulated"}
               </span>
             </div>
