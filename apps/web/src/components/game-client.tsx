@@ -164,15 +164,32 @@ export function GameClient() {
   const lastACORef  = useRef<string|null>(null);
   const fallbackTimerRef = useRef<number|undefined>(undefined);
   const socketOnlineRef = useRef(false);
+  const lastConnectionModeRef = useRef<"live" | "simulated">("simulated");
+  const modeSoundReadyRef = useRef(false);
   const fallbackRoundRef = useRef({
     phase: "starting" as "starting" | "running" | "crashed",
     roundId: 1,
     phaseStartedAt: Date.now(),
     crashAt: 2,
   });
-  const { playTick, playBetPlaced, playCashOut, playCrash } = useGameAudio();
+  const { playTick, playBetPlaced, playCashOut, playCrash, playModeLive, playModeSimulated } = useGameAudio();
 
   useMultiplierCanvas(canvasRef, state.currentMultiplier, state.status);
+
+  useEffect(() => {
+    // Skip initial mount to avoid autoplay-policy errors and unwanted startup ping.
+    if (!modeSoundReadyRef.current) {
+      modeSoundReadyRef.current = true;
+      lastConnectionModeRef.current = connectionMode;
+      return;
+    }
+    if (lastConnectionModeRef.current === connectionMode) return;
+
+    if (connectionMode === "live") playModeLive();
+    else playModeSimulated();
+
+    lastConnectionModeRef.current = connectionMode;
+  }, [connectionMode, playModeLive, playModeSimulated]);
 
   function stopFallbackSimulation() {
     if (fallbackTimerRef.current !== undefined) {

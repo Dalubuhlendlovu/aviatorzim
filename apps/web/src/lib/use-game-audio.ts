@@ -100,5 +100,44 @@ export function useGameAudio() {
     source.stop(ctx.currentTime + 0.45);
   }, []);
 
-  return { playTick, playBetPlaced, playCashOut, playCrash };
+  /** Soft confirmation chime when live server connection is active */
+  const playModeLive = useCallback(() => {
+    const ctx = getCtx();
+    if (!ctx) return;
+
+    const notes = [740, 880];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      const t = ctx.currentTime + i * 0.08;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.045, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+  }, []);
+
+  /** Gentle amber ping when switching to local simulation fallback */
+  const playModeSimulated = useCallback(() => {
+    const ctx = getCtx();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(520, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(420, ctx.currentTime + 0.16);
+    gain.gain.setValueAtTime(0.035, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.22);
+  }, []);
+
+  return { playTick, playBetPlaced, playCashOut, playCrash, playModeLive, playModeSimulated };
 }
